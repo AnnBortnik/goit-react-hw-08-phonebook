@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { fetchContacts, addContact } from '../../redux/contactsOperations'; 
 import styled from 'styled-components';
 
 const FormContainer = styled.form`
@@ -45,9 +47,16 @@ const AddButton = styled.button`
 }
 `;
 
-const ContactForm = ({ onSubmit }) => {
+const ContactForm = () => {
   const [name, setName] = useState('');
   const [number, setNumber] = useState('');
+  const dispatch = useDispatch();
+
+  useEffect(() => {
+    dispatch(fetchContacts());
+  }, [dispatch]);
+  
+  const contacts = useSelector(state => state.contacts.contacts);
 
   const handleNameChange = evt => {
     setName(evt.target.value);
@@ -60,12 +69,21 @@ const ContactForm = ({ onSubmit }) => {
     setNumber(input);
   };
 
-  const handleSubmit = e => {
+const handleSubmit = (e) => {
     e.preventDefault();
+    const newContact = { name, number };
 
-    onSubmit(name, number);
-    setName('');
-    setNumber('');
+    const doesExist = contacts.some(
+      contact => contact.name.toLowerCase() === newContact.name.toLowerCase()
+    );
+
+    if (doesExist) {
+      alert(`${newContact.name} is already in contacts.`);
+    } else {
+      dispatch(addContact(newContact)).then(() => dispatch(fetchContacts()));
+    }
+     setName('');
+     setNumber('');
   };
 
   return (
