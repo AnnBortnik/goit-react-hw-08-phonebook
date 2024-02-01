@@ -1,60 +1,72 @@
 import React, {useEffect} from 'react';
 import { useSelector, useDispatch } from 'react-redux';
+import { actions } from '../redux/contactsSlice';
+import { addContact, fetchContacts } from '../redux/contactsOperations';
 import ContactForm from './ContactForm/ContactForm';
 import ContactList from './ContactList/ContactList';
 import Filter from './Filter/Filter';
-import {
-  addContact,
-  deleteContact,
-  setFilter,
-  fetchContacts,
-} from './contactsSlice';
-import styled from 'styled-components';
-
-const CenteredContainer = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100vh;
-`;
+import { Box } from '@chakra-ui/react';
+import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import RegisterFormPage from '../pages/Register';
+import LoginFormPage from '../pages/Login';
+import Navigation from './Navigation/Navigation';
+import UserMenu from './UserMenu/UserMenu';
+import PrivateRoute from './PrivateRoute'; 
+import { ChakraProvider } from "@chakra-ui/react";
 
 const App = () => {
   const dispatch = useDispatch();
-  const contacts = useSelector(state => state.contacts.items);
-  const filter = useSelector(state => state.contacts.filter);
+  const { contacts, filter } = useSelector(state => state.contacts);
 
   useEffect(() => {
     dispatch(fetchContacts());
-  }, [dispatch]);
+  }, [dispatch]); 
 
-  const handleAddContact = (name, number) => {
-    dispatch(addContact({ id: Date.now(), name, number }));
+  const handleAddContact = newContact => {
+    const doesExist = contacts.some(
+      contact => contact.name.toLowerCase() === newContact.name.toLowerCase()
+    );
+
+    if (doesExist) {
+      alert(`${newContact.name} is already in contacts.`);
+    } else {
+      dispatch(addContact(newContact));
+    }
   };
 
-  const handleDeleteContact = contactId => {
-    dispatch(deleteContact(contactId));
-  };
+  const handleFilterChange = event => dispatch(actions.setFilter(event.target.value));
 
-  const handleFilterChange = e => {
-    dispatch(setFilter(e.target.value));
-  };
+  const filteredContacts = contacts.filter(contact =>
+    contact.name.toLowerCase().includes(filter.toLowerCase())
+  );
 
-  const filteredContacts = contacts
-    ? contacts.filter(contact =>
-        contact.name.toLowerCase().includes(filter.toLowerCase())
-      )
-    : [];
-
-  return (
-    <CenteredContainer>
-      <h1>Phonebook</h1>
-      <ContactForm onSubmit={handleAddContact} />
-      <h2>Contacts</h2>
-      <Filter value={filter} onChange={handleFilterChange} />
-      <ContactList contacts={filteredContacts} onDeleteContact={handleDeleteContact} />
-    </CenteredContainer>
+   return (
+    <ChakraProvider>
+      <Router>
+        <Navigation />
+        <UserMenu />
+        <Box display="flex" flexDirection="column" alignItems="center" justifyContent="center" height="100vh">
+          <Routes>
+            <Route path="/register" element={<RegisterFormPage />} />
+            <Route path="/login" element={<LoginFormPage />} />
+            <Route path="/contacts" element={
+              <PrivateRoute>
+                <>
+                <h1 style={{ fontSize: '2em', fontWeight: 'bold' }}>Phonebook</h1>
+                  <ContactForm onAdd={handleAddContact} />
+                <h2 style={{ fontSize: '1.5em', fontWeight: 'bold' }}>Contacts</h2>
+                  <Filter value={filter} onChange={handleFilterChange} />
+                  <ContactList contacts={filteredContacts} onDeleteContact={actions.deleteContact} />
+                </>
+              </PrivateRoute>
+            } />
+            <Route path="*" element={<Navigate to="/login" replace />} />
+          </Routes>
+        </Box>
+      </Router>
+    </ChakraProvider>
   );
 };
+
 
 export default App;
